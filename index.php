@@ -2,6 +2,10 @@
 
 /** @noinspection ALL */
 
+header('Access-Control-Allow-Origin: *');
+header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept");
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
+
 require_once './vendor/autoload.php';
 
 // Respuesta del servicios
@@ -15,12 +19,12 @@ if ($_FILES && $_FILES['file']) {
   $randStart = rand(1, 5);
   $fileName = substr($uniqId, $randStart, 8);
   
+  // Ruta donde se cargara el archivo
+  $filePath = __DIR__.'/uploaded-files/'.$fileName.'.pdf';
+  
   // Mueve el archivo al directorio
-  if (move_uploaded_file($_FILES["file"]["tmp_name"], 'files/'.$fileName.'.pdf')) {
+  if (move_uploaded_file($_FILES["file"]["tmp_name"], $filePath)) {
     try {
-      // Ruta del archivo cargado
-      $filePath = __DIR__.'/uploaded-files/'.$fileName.'.pdf';
-      
       // Directorio de las imagenes
       $imagesPath = __DIR__.'/images/'.$fileName;
       
@@ -38,10 +42,13 @@ if ($_FILES && $_FILES['file']) {
         $directoryFiles[$key] = $imagesPath.'/'.$directoryFiles[$key];
       }
       
+      // Directorio del archivo final
+      $finalFile = 'final-files/'.$fileName.'.pdf';
+      
       // Convierte el contenido del directorio en un PDF
       $pdf = new Imagick($directoryFiles);
       $pdf->setImageFormat('pdf');
-      $pdf->writeImages('final-files/'.$fileName.'.pdf', true);
+      $pdf->writeImages($finalFile, true);
       
       // Modifica la respuesta del servicio
       $response['data'] = 'final-files/'.$fileName.'.pdf';
