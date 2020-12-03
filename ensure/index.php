@@ -1,7 +1,5 @@
 <?php
 
-/** @noinspection ALL */
-
 header('Access-Control-Allow-Origin: *');
 header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept");
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
@@ -9,47 +7,69 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
 require_once '../vendor/autoload.php';
 
 // Respuesta del servicios
-$response = array (
+$response = array(
   'code' => 200,
   'data' => ''
 );
+
+// Función para eliminar archivos y directorios
+function deleteFiles($target)
+{
+  if (is_dir($target)) {
+    $files = glob($target . '*', GLOB_MARK);
+
+    foreach ($files as $file) {
+      deleteFiles($file);
+    }
+
+    rmdir($target);
+  } else if (is_file($target)) {
+    unlink($target);
+  }
+}
 
 if ($_FILES && $_FILES['file']) {
   $uniqId = uniqid();
   $randStart = rand(1, 5);
   $fileName = substr($uniqId, $randStart, 8);
-  
+
   // Ruta donde se cargara el archivo
-  $filePath = __DIR__.'/../uploaded-files/'.$fileName.'.pdf';
-  
+  $filePath = __DIR__ . '/../uploaded-files/' . $fileName . '.pdf';
+
   // Mueve el archivo al directorio
   if (move_uploaded_file($_FILES["file"]["tmp_name"], $filePath)) {
     try {
       // Directorio de las imagenes
-      $imagesPath = __DIR__.'/../images/'.$fileName;
-      
+      $imagesPath = __DIR__ . '/../images/' . $fileName;
+
       // Crea el directorio donde se guardaran las imagenes
       mkdir($imagesPath, 0777, true);
-      
+
       // Convierte el PDF en imagenes
       $pdf = new Spatie\PdfToImage\Pdf($filePath);
-      $pdf->setOutputFormat('jpg')->saveAllPagesAsImages($imagesPath, $fileName.'-');
-      
+      $pdf->setOutputFormat('jpg')->saveAllPagesAsImages($imagesPath, $fileName . '-');
+
+      // Elimina el archivo cargado
+      deleteFiles($filePath);
+
       // Obtiene el contenido del directorio
-      $directoryFiles = array_diff(scandir($imagesPath), array ('..', '.'));
-      
+      $directoryFiles = array_diff(scandir($imagesPath), array('..', '.'));
+
       foreach ($directoryFiles as $key => $item) {
-        $directoryFiles[$key] = $imagesPath.'/'.$directoryFiles[$key];
+        $directoryFiles[$key] = $imagesPath . '/' . $directoryFiles[$key];
       }
-      
+
       // Directorio del archivo final
-      $finalFile = '../final-files/'.$fileName.'.pdf';
-      
+      $finalFile = '../final-files/' . $fileName . '.pdf';
+
       // Convierte el contenido del directorio en un PDF
       $pdf = new Imagick($directoryFiles);
       $pdf->setImageFormat('pdf');
       $pdf->writeImages($finalFile, true);
-      
+
+      // Elimina el directorio con las imagenes
+      deleteFiles($imagesPath);
+
       // Modifica la respuesta del servicio
       $response['data'] = $finalFile;
     } catch (\Spatie\PdfToImage\Exceptions\PdfDoesNotExist $error) {
