@@ -22,7 +22,7 @@ function deleteFiles($target)
       deleteFiles($file);
     }
 
-    rmdir($target);
+    @rmdir($target);
   } else if (is_file($target)) {
     unlink($target);
   }
